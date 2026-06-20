@@ -11,7 +11,10 @@ builder.Services.AddAuthentication("TestScheme")
                TestAuthHandler>("TestScheme", options => { });
 
 builder.Services.AddAuthorization();
-
+builder.Services.AddOptions<PaymentOptions>()
+    .BindConfiguration("Payments")
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 var app = builder.Build();
 
 
