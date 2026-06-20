@@ -1,28 +1,32 @@
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Enable controllers
+// 1. Controllers
 builder.Services.AddControllers();
 
-// 2. Add authentication + authorization (IMPORTANT for M4)
+// 2. Authentication + Authorization
 builder.Services.AddAuthentication("TestScheme")
     .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions,
                TestAuthHandler>("TestScheme", options => { });
+
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// 3. Middleware pipeline (ORDER MATTERS)
 
-// Routing (maps request paths)
+// 3. OUTER LOGGING MIDDLEWARE (must be first)
+app.UseMiddleware<RequestLoggingMiddleware>();
+
+// 4. Exception handler (required by lab)
+app.UseExceptionHandler("/error");
+
+// 5. Routing
 app.UseRouting();
 
-// Authentication (WHO ARE YOU?)
+// 6. Auth
 app.UseAuthentication();
-
-// Authorization (ARE YOU ALLOWED?)
 app.UseAuthorization();
 
-// Map controllers (endpoints)
+// 7. Endpoints
 app.MapControllers();
 
 app.Run();
