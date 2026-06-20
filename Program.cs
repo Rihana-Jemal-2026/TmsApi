@@ -2,6 +2,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 1. Controllers
 builder.Services.AddControllers();
+builder.Services.AddSingleton<EnrollmentWorker>();
+builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
 
 // 2. Authentication + Authorization
 builder.Services.AddAuthentication("TestScheme")
