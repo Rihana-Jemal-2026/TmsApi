@@ -1,41 +1,62 @@
+using Microsoft.AspNetCore.Authentication;
+using Scalar.AspNetCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Controllers
+// Controllers
 builder.Services.AddControllers();
+
+// ProblemDetails
 builder.Services.AddProblemDetails();
+
+// OpenAPI
+builder.Services.AddOpenApi();
+
+// Services
 builder.Services.AddSingleton<EnrollmentWorker>();
 builder.Services.AddSingleton<IEnrollmentService, EnrollmentService>();
 
-// 2. Authentication + Authorization
-builder.Services.AddAuthentication("TestScheme")
-    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions,
-               TestAuthHandler>("TestScheme", options => { });
+// Authentication
+builder.Services
+    .AddAuthentication("TestScheme")
+    .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(
+        "TestScheme",
+        options => { });
 
 builder.Services.AddAuthorization();
+
+// Options
 builder.Services.AddOptions<PaymentOptions>()
     .BindConfiguration("Payments")
     .ValidateDataAnnotations()
     .ValidateOnStart();
+
 var app = builder.Build();
 
-
-// 3. OUTER LOGGING MIDDLEWARE (must be first)
+// Logging middleware (FIRST)
 app.UseMiddleware<RequestLoggingMiddleware>();
 
-// 4. Exception handler (required by lab)
-app.UseExceptionHandler("/error");
-
-// 5. Routing
-app.UseRouting();
-
-// 6. Auth
-app.UseAuthentication();
-app.UseAuthorization();
+// Exception handling
 app.UseExceptionHandler();
 
-// 7. Endpoints
+// Routing
+app.UseRouting();
+
+// Auth
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Development tools
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
+
+// Controllers
 app.MapControllers();
 
+// Test error route
 app.MapGet("/api/error", () =>
 {
     throw new TmsDatabaseException("Simulated database failure for ProblemDetails testing");
