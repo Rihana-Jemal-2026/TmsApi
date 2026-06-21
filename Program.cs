@@ -2,6 +2,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 1. Controllers
 builder.Services.AddControllers();
+builder.Services.AddProblemDetails();
 builder.Services.AddSingleton<EnrollmentWorker>();
 builder.Services.AddSingleton<IEnrollmentService, EnrollmentService>();
 
@@ -30,8 +31,14 @@ app.UseRouting();
 // 6. Auth
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseExceptionHandler();
 
 // 7. Endpoints
 app.MapControllers();
+
+app.MapGet("/api/error", () =>
+{
+    throw new TmsDatabaseException("Simulated database failure for ProblemDetails testing");
+});
 
 app.Run();
