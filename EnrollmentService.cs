@@ -14,10 +14,13 @@ public class EnrollmentService : IEnrollmentService
     public EnrollmentService(ILogger<EnrollmentService> logger)
     {
         _logger = logger;
+        Console.WriteLine("🔥 EnrollmentService CREATED");
     }
 
     public Task<EnrollmentRecord> EnrollAsync(string studentId, string courseCode)
     {
+        Console.WriteLine($"POST -> STORE COUNT BEFORE = {_store.Count}");
+
         var existing = _store.Values
             .FirstOrDefault(e => e.StudentId == studentId && e.CourseCode == courseCode);
 
@@ -57,6 +60,8 @@ public class EnrollmentService : IEnrollmentService
 
     public Task<IReadOnlyList<EnrollmentRecord>> GetAllAsync()
     {
+         Console.WriteLine($"DEBUG STORE COUNT = {_store.Count}");
+
         return Task.FromResult((IReadOnlyList<EnrollmentRecord>)_store.Values.ToList());
     }
 
