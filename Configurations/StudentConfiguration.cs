@@ -8,8 +8,10 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
 {
     public void Configure(EntityTypeBuilder<Student> builder)
     {
+        // Primary key
         builder.HasKey(s => s.Id);
 
+        // Required fields (example)
         builder.Property(s => s.Name)
             .IsRequired()
             .HasMaxLength(100);
@@ -18,7 +20,20 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
             .IsRequired()
             .HasMaxLength(50);
 
+        // GPA column precision (optional but good practice)
         builder.Property(s => s.GPA)
-            .IsRequired();
+            .HasPrecision(3, 2);
+
+        // ⭐ THIS IS THE IMPORTANT PART (EXERCISE 8)
+        builder.Property<DateTime>("LastUpdated");
+
+        // Concurrency token (EXERCISE 8)
+        builder.Property<uint>("Version")
+            .IsRowVersion();
+
+        // Relationships (if not already elsewhere)
+        builder.HasMany(s => s.Enrollments)
+            .WithOne(e => e.Student)
+            .HasForeignKey(e => e.StudentId);
     }
 }
