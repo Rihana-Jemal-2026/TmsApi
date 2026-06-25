@@ -12,15 +12,17 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
 
         builder.Property(e => e.Grade)
             .IsRequired();
-
-        // Student relationship
+// Prevents accidental deletion of enrollments when a student or course is deleted.
+// Ensures data integrity for historical academic records.
         builder.HasOne(e => e.Student)
             .WithMany(s => s.Enrollments)
-            .HasForeignKey(e => e.StudentId);
+            .HasForeignKey(e => e.StudentId)
+            .OnDelete(DeleteBehavior.Restrict); // IMPORTANT
 
-        // Course relationship
+        // Course relationship (many enrollments per course)
         builder.HasOne(e => e.Course)
             .WithMany(c => c.Enrollments)
-            .HasForeignKey(e => e.CourseId);
+            .HasForeignKey(e => e.CourseId)
+            .OnDelete(DeleteBehavior.Restrict); // IMPORTANT
     }
 }
