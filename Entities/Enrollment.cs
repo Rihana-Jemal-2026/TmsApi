@@ -7,7 +7,7 @@ public class Enrollment
     public int Id { get; set; }
 
     public int StudentId { get; set; }
-
+    public bool IsArchived { get; set; }
     public int CourseId { get; set; }
     public int Year { get; set; }
     public decimal? Grade { get; set; }

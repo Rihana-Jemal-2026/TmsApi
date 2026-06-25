@@ -24,5 +24,6 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
             .WithMany(c => c.Enrollments)
             .HasForeignKey(e => e.CourseId)
             .OnDelete(DeleteBehavior.Restrict); // IMPORTANT
+        builder.HasQueryFilter(e => !e.IsArchived);
     }
 }

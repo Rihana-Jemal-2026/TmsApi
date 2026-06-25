@@ -140,4 +140,26 @@ public class TestController(TmsDbContext context) : ControllerBase
 
         return Ok(report);
     }
+    [HttpPost("archive-old-enrollments")]
+public async Task<IActionResult> ArchiveOldEnrollments(CancellationToken cancellationToken)
+{
+    var cutoffYear = 2024;
+
+    var affected = await context.Enrollments
+        .Where(e => e.Year < cutoffYear)
+        .ExecuteUpdateAsync(setters => setters
+            .SetProperty(e => e.IsArchived, true),
+            cancellationToken);
+
+    return Ok(new { Archived = affected });
+}
+    [HttpGet("admin/enrollments")]
+public async Task<IActionResult> GetAllEnrollments()
+{
+    var data = await context.Enrollments
+        .IgnoreQueryFilters()
+        .ToListAsync();
+
+    return Ok(data);
+}
 }
