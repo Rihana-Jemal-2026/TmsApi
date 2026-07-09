@@ -8,7 +8,7 @@ namespace TmsApi.Data;
 public class TmsDbContext(DbContextOptions<TmsDbContext> options)
     : DbContext(options)
 {
-    public override int SaveChanges()
+    /*public override int SaveChanges()
     {
         UpdateAudit();
         return base.SaveChanges();
@@ -18,9 +18,19 @@ public class TmsDbContext(DbContextOptions<TmsDbContext> options)
     {
         UpdateAudit();
         return base.SaveChangesAsync(cancellationToken);
-    }
+    }*/
 
-    private void UpdateAudit()
+    public override int SaveChanges()
+{
+    return base.SaveChanges();
+}
+
+public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+{
+    return base.SaveChangesAsync(cancellationToken);
+}
+
+   /* private void UpdateAudit()
     {
         var entries = ChangeTracker.Entries()
             .Where(e => e.State == EntityState.Modified || e.State == EntityState.Added);
@@ -29,7 +39,7 @@ public class TmsDbContext(DbContextOptions<TmsDbContext> options)
         {
             entry.Property("LastUpdated").CurrentValue = DateTime.UtcNow;
         }
-    }
+    }*/
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

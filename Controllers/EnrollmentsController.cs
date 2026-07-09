@@ -1,3 +1,5 @@
+using TmsApi.Services;
+using TmsApi.Dtos;
 using Microsoft.AspNetCore.Mvc;
 
 namespace TmsApi.Controllers;
@@ -6,12 +8,12 @@ namespace TmsApi.Controllers;
 [Route("api/enrollments")]
 public class EnrollmentsController : ControllerBase
 {
-    private readonly IEnrollmentService _service;
+   private readonly IEnrollmentService_M4 _service;
 
-    public EnrollmentsController(IEnrollmentService service)
-    {
-        _service = service;
-    }
+   public EnrollmentsController(IEnrollmentService_M4 service)
+{
+    _service = service;
+}
 
     [HttpGet]
     public async Task<IActionResult> GetAll()

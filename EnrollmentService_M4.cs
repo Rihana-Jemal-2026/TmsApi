@@ -1,4 +1,4 @@
-public interface IEnrollmentService
+public interface IEnrollmentService_M4
 {
     Task<EnrollmentRecord> EnrollAsync(string studentId, string courseCode);
     Task<EnrollmentRecord?> GetByIdAsync(string id);
@@ -6,16 +6,16 @@ public interface IEnrollmentService
     Task<bool> DeleteAsync(string id);
 }
 
-public class EnrollmentService : IEnrollmentService
+public class EnrollmentService_M4 : IEnrollmentService_M4
 {
     private readonly Dictionary<string, EnrollmentRecord> _store = new();
-    private readonly ILogger<EnrollmentService> _logger;
+    private readonly ILogger<EnrollmentService_M4> _logger;
 
-    public EnrollmentService(ILogger<EnrollmentService> logger)
-    {
-        _logger = logger;
-        Console.WriteLine("🔥 EnrollmentService CREATED");
-    }
+public EnrollmentService_M4(ILogger<EnrollmentService_M4> logger)
+{
+    _logger = logger;
+    Console.WriteLine("🔥 EnrollmentService CREATED");
+}
 
     public Task<EnrollmentRecord> EnrollAsync(string studentId, string courseCode)
     {

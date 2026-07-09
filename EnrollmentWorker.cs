@@ -13,8 +13,7 @@ public class EnrollmentWorker
     {
         using var scope = _scopeFactory.CreateScope();
 
-        var service = scope.ServiceProvider.GetRequiredService<IEnrollmentService>();
-
+       var service = scope.ServiceProvider.GetRequiredService<IEnrollmentService_M4>();
         // now safe to use scoped service
         // example test call:
         service.GetAllAsync().Wait();

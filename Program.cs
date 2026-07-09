@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using TmsApi.Data;
 using TmsApi.Entities;
+using TmsApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,7 +18,9 @@ builder.Services.AddOpenApi();
 
 // Services
 builder.Services.AddSingleton<EnrollmentWorker>();
-builder.Services.AddSingleton<IEnrollmentService, EnrollmentService>();
+builder.Services.AddSingleton<IEnrollmentService_M4, EnrollmentService_M4>();
+builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
+
 
 builder.Services.AddDbContext<TmsDbContext>(options =>
     options.UseNpgsql(
@@ -38,6 +41,8 @@ builder.Services.AddOptions<PaymentOptions>()
     .BindConfiguration("Payments")
     .ValidateDataAnnotations()
     .ValidateOnStart();
+
+builder.Services.AddScoped<ICourseService, CourseService>();
 
 var app = builder.Build();
 
@@ -91,11 +96,11 @@ using (var scope = app.Services.CreateScope())
         context.Students.AddRange(students);
 
         var courses = new List<Course>
-        {
-            new() { Code = "CS-101", Title = "Introduction to Computer Science", Capacity = 30 },
-            new() { Code = "CS-201", Title = "Data Structures and Algorithms", Capacity = 25 },
-            new() { Code = "MAT-101", Title = "Calculus I", Capacity = 40 }
-        };
+{
+    new() { Code = "CS-101", Title = "Introduction to Computer Science", MaxCapacity = 30 },
+    new() { Code = "CS-201", Title = "Data Structures and Algorithms", MaxCapacity = 25 },
+    new() { Code = "MAT-101", Title = "Calculus I", MaxCapacity = 40 }
+};
 
         context.Courses.AddRange(courses);
 
