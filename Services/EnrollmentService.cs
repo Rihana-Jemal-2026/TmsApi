@@ -26,18 +26,19 @@ public class EnrollmentService(
             .FirstOrDefaultAsync(ct);
     }
 
+
     public async Task<EnrollmentResponseDto> CreateAsync(
         int courseId,
         EnrollStudentRequest request,
         CancellationToken ct)
     {
         var enrollment = new Enrollment
-{
-    CourseId = courseId,
-    StudentId = request.StudentId,
-    EnrolledAt = DateTime.UtcNow,
-    Grade = 0
-};
+        {
+            CourseId = courseId,
+            StudentId = request.StudentId,
+            EnrolledAt = DateTime.UtcNow,
+            Grade = 0
+        };
 
         context.Enrollments.Add(enrollment);
 
@@ -54,5 +55,22 @@ public class EnrollmentService(
             ct)
             ?? throw new InvalidOperationException(
                 "Enrollment not found after creation.");
+    }
+
+
+    // M6 Session 3 - List enrollments for a course
+    public async Task<IReadOnlyList<EnrollmentResponseDto>> GetByCourseAsync(
+        int courseId,
+        CancellationToken ct)
+    {
+        return await context.Enrollments
+            .AsNoTracking()
+            .Where(e => e.CourseId == courseId)
+            .Select(e => new EnrollmentResponseDto(
+                e.Id,
+                e.CourseId,
+                e.StudentId,
+                e.EnrolledAt))
+            .ToListAsync(ct);
     }
 }
