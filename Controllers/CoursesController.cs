@@ -16,7 +16,16 @@ public class CoursesController : ControllerBase
         _courseService = courseService;
     }
 
-    [HttpGet("{id:int}")]
+    [HttpGet]
+    public async Task<IActionResult> GetCourses(
+        [FromQuery] PagedRequest request,
+        CancellationToken ct)
+    {
+        var result = await _courseService.GetCoursesAsync(request, ct);
+        return Ok(result);
+    }
+
+    [HttpGet("{id:int}", Name = nameof(GetById))]
     public async Task<ActionResult<CourseResponseDto>> GetById(
         int id,
         CancellationToken ct)
@@ -37,42 +46,42 @@ public class CoursesController : ControllerBase
     }
 
     [HttpPost]
-public async Task<ActionResult<CourseResponseDto>> Create(
-    CreateCourseRequestDto request,
-    CancellationToken ct)
-{
-    // Check if a course with the same code already exists
-    if (await _courseService.CodeExistsAsync(request.Code, ct))
+    public async Task<ActionResult<CourseResponseDto>> Create(
+        CreateCourseRequestDto request,
+        CancellationToken ct)
     {
-        return Conflict(new ProblemDetails
+        // Check if a course with the same code already exists
+        if (await _courseService.CodeExistsAsync(request.Code, ct))
         {
-            Title = "Course already exists",
-            Detail = $"A course with code '{request.Code}' already exists.",
-            Status = StatusCodes.Status409Conflict
-        });
+            return Conflict(new ProblemDetails
+            {
+                Title = "Course already exists",
+                Detail = $"A course with code '{request.Code}' already exists.",
+                Status = StatusCodes.Status409Conflict
+            });
+        }
+
+        var course = new Course
+        {
+            Code = request.Code,
+            Title = request.Title,
+            MaxCapacity = request.MaxCapacity
+        };
+
+        var created = await _courseService.CreateAsync(course, ct);
+
+        var response = new CourseResponseDto
+        {
+            Id = created.Id,
+            Code = created.Code,
+            Title = created.Title,
+            MaxCapacity = created.MaxCapacity,
+            EnrollmentCount = 0
+        };
+
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = created.Id },
+            response);
     }
-
-    var course = new Course
-    {
-        Code = request.Code,
-        Title = request.Title,
-        MaxCapacity = request.MaxCapacity
-    };
-
-    var created = await _courseService.CreateAsync(course, ct);
-
-    var response = new CourseResponseDto
-    {
-        Id = created.Id,
-        Code = created.Code,
-        Title = created.Title,
-        MaxCapacity = created.MaxCapacity,
-        EnrollmentCount = 0
-    };
-
-    return CreatedAtAction(
-        nameof(GetById),
-        new { id = created.Id },
-        response);
-}
 }
