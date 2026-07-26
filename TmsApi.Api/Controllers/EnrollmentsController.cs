@@ -1,78 +1,62 @@
+using Asp.Versioning;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using TmsApi.Application.DTOs;
-using TmsApi.Application.Interfaces;
+using TmsApi.Application.Enrollments.Commands;
+using TmsApi.Application.Enrollments.Queries;
 
-namespace TmsApi.Controllers;
+namespace TmsApi.Api.Controllers;
 
 [ApiController]
-[Route("api/courses/{courseId:int}/enrollments")]
-[Tags("Enrollments")]
-[Produces("application/json")]
-public class EnrollmentsController(
-    ICourseService courseService,
-    IEnrollmentService enrollmentService) : ControllerBase
+[Route("api/v{version:apiVersion}/enrollments")]
+[ApiVersion("2.0")]
+public class EnrollmentsController(IMediator mediator) : ControllerBase
 {
-
-    // GET /api/courses/{courseId}/enrollments
-    [HttpGet(Name = "ListCourseEnrollments")]
-    public async Task<IActionResult> GetEnrollments(
-        int courseId,
-        CancellationToken ct)
-    {
-        var course = await courseService.GetByIdAsync(courseId, ct);
-
-        if (course is null)
-            return NotFound();
-
-        var enrollments = await enrollmentService.GetByCourseAsync(courseId, ct);
-
-        return Ok(enrollments);
-    }
-
-
-    // GET /api/courses/{courseId}/enrollments/{id}
-    [HttpGet("{id:int}", Name = nameof(GetEnrollment))]
-    public async Task<IActionResult> GetEnrollment(
-        int courseId,
-        int id,
-        CancellationToken ct)
-    {
-        var enrollment = await enrollmentService.GetByIdAsync(
-            courseId,
-            id,
-            ct);
-
-        if (enrollment is null)
-            return NotFound();
-
-        return Ok(enrollment);
-    }
-
-
-    // POST /api/courses/{courseId}/enrollments
     [HttpPost]
-    public async Task<IActionResult> EnrollStudent(
-        int courseId,
-        EnrollStudentRequest request,
+    public async Task<IActionResult> Enroll(
+        EnrollStudentCommand command,
         CancellationToken ct)
     {
-        var course = await courseService.GetByIdAsync(courseId, ct);
+        var result = await mediator.Send(command, ct);
 
-        if (course is null)
-            return NotFound();
+        return result.Match<IActionResult>(
+            onSuccess: created =>
+                CreatedAtAction(
+                    nameof(GetSchedule),
+                    new { studentId = created.StudentId },
+                    created),
 
-        var result = await enrollmentService.CreateAsync(
-            courseId,
-            request,
+            onFailure: error =>
+            {
+                var status = error.Code switch
+                {
+                    "course_not_found" =>
+                        StatusCodes.Status404NotFound,
+
+                    "course_full" or "already_enrolled" =>
+                        StatusCodes.Status409Conflict,
+
+                    _ =>
+                        StatusCodes.Status400BadRequest
+                };
+
+                return Problem(
+                    statusCode: status,
+                    title: "Enrollment rejected",
+                    detail: error.Message,
+                    type: $"https://tms.local/errors/{error.Code}");
+            });
+    }
+
+
+    [HttpGet("{studentId}/schedule")]
+    public async Task<IActionResult> GetSchedule(
+        int studentId,
+        CancellationToken ct)
+    {
+        var schedule = await mediator.Send(
+            new GetStudentScheduleQuery(studentId),
             ct);
 
-        return CreatedAtAction(
-            nameof(GetEnrollment),
-            new
-            {
-                courseId,
-                id = result.Id
-            },
-            result);
+        return Ok(schedule);
     }
 }

@@ -1,0 +1,18 @@
+POST /api/v2/enrollments
+CSE-101
+Result: 201 Created
+
+POST /api/v2/enrollments
+invalid
+Result: 400 Bad Request
+
+POST /api/v2/enrollments
+ZZZ-999
+Result: 404 Not Found
+
+POST /api/v2/enrollments
+CSE-101 again
+Result: 409 Conflict
+
+GET /api/v2/enrollments/1/schedule
+Result: 200 OK
