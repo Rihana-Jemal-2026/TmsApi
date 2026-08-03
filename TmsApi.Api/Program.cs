@@ -16,12 +16,36 @@ using TmsApi.Application.Interfaces;
 using FluentValidation;
 using TmsApi.Application.Enrollments.Commands;
 using System.Threading.RateLimiting;
+using System.Threading.Channels;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 using TmsApi.Api.RateLimiting;
+using TmsApi.Application.Transcripts;
+using TmsApi.Infrastructure.Transcripts;
+using TmsApi.Api.Hubs;
+using TmsApi.Api.Workers;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ===============================
+// Transcripts & Background Workers (Session 3)
+// ===============================
+
+builder.Services.AddSingleton<ITranscriptStatusStore, InMemoryTranscriptStatusStore>();
+
+builder.Services.AddSingleton(Channel.CreateBounded<TranscriptRequest>(
+    new BoundedChannelOptions(100)
+    {
+        FullMode = BoundedChannelFullMode.Wait
+    }));
+
+builder.Services.AddHostedService<TranscriptWorker>();
+
+// ===============================
+// SignalR (Session 3)
+// ===============================
+
+builder.Services.AddSignalR();
 
 // ===============================
 // Rate Limiting
@@ -34,7 +58,6 @@ builder.Services.AddRateLimiter(options =>
         {
             var (partitionKey, tier) =
                 ApiKeyResolver.Resolve(httpContext);
-
 
             return tier switch
             {
@@ -51,7 +74,6 @@ builder.Services.AddRateLimiter(options =>
                             AutoReplenishment = true
                         }),
 
-
                 ApiKeyTier.Free =>
                     RateLimitPartition.GetTokenBucketLimiter(
                         $"free:{partitionKey}",
@@ -64,7 +86,6 @@ builder.Services.AddRateLimiter(options =>
                             QueueLimit = 0,
                             AutoReplenishment = true
                         }),
-
 
                 _ =>
                     RateLimitPartition.GetTokenBucketLimiter(
@@ -81,7 +102,6 @@ builder.Services.AddRateLimiter(options =>
             };
         });
 
-
     // ===============================
     // Transcript Concurrency Limiter
     // ===============================
@@ -94,17 +114,13 @@ builder.Services.AddRateLimiter(options =>
             QueueProcessingOrder.OldestFirst;
     });
 
-
-
     options.RejectionStatusCode =
         StatusCodes.Status429TooManyRequests;
-
 
     options.OnRejected = async (context, ct) =>
     {
         context.HttpContext.Response.ContentType =
             "application/problem+json";
-
 
         await context.HttpContext.Response.WriteAsJsonAsync(
             new ProblemDetails
@@ -116,8 +132,6 @@ builder.Services.AddRateLimiter(options =>
             ct);
     };
 });
-
-
 
 // ===============================
 // Hybrid Cache
@@ -132,8 +146,6 @@ builder.Services.AddHybridCache(options =>
     };
 });
 
-
-
 // ===============================
 // Controllers
 // ===============================
@@ -142,8 +154,6 @@ builder.Services.AddControllers(options =>
 {
     options.Filters.Add<TmsApi.Api.Filters.AuditLogFilter>();
 });
-
-
 
 // ===============================
 // API Versioning
@@ -157,15 +167,12 @@ builder.Services.AddApiVersioning(options =>
 
     options.ApiVersionReader =
         new UrlSegmentApiVersionReader();
-
 })
 .AddApiExplorer(options =>
 {
     options.GroupNameFormat = "'v'VVV";
     options.SubstituteApiVersionInUrl = true;
 });
-
-
 
 // ===============================
 // Problem Details
@@ -175,37 +182,26 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-
-
 // ===============================
 // OpenAPI
 // ===============================
 
 builder.Services.AddOpenApi();
 
-
-
 // ===============================
 // Services
 // ===============================
 
 builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
-
 builder.Services.AddScoped<ICourseService, CourseService>();
-
 builder.Services.AddScoped<ICachedCourseService, CachedCourseService>();
-
-
 
 // ===============================
 // Repositories
 // ===============================
 
 builder.Services.AddScoped<ICourseRepository, CourseRepository>();
-
 builder.Services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
-
-
 
 // ===============================
 // Database
@@ -217,8 +213,6 @@ builder.Services.AddDbContext<TmsDbContext>(options =>
     .LogTo(Console.WriteLine, LogLevel.Information)
     .EnableSensitiveDataLogging());
 
-
-
 // ===============================
 // Authentication
 // ===============================
@@ -229,10 +223,7 @@ builder.Services
         "TestScheme",
         options => { });
 
-
 builder.Services.AddAuthorization();
-
-
 
 // ===============================
 // Options
@@ -243,8 +234,6 @@ builder.Services.AddOptions<PaymentOptions>()
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
-
-
 // ===============================
 // MediatR
 // ===============================
@@ -254,52 +243,42 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(
         typeof(EnrollStudentCommand).Assembly);
 
-
     cfg.AddOpenBehavior(
         typeof(TmsApi.Application.Behaviors.LoggingBehavior<,>));
-
 
     cfg.AddOpenBehavior(
         typeof(TmsApi.Application.Behaviors.ValidationBehavior<,>));
 });
 
-
-
 builder.Services.AddValidatorsFromAssembly(
     typeof(EnrollStudentValidator).Assembly);
 
-
-
 var app = builder.Build();
 
+// ===============================
+// SignalR Hub Endpoint (Session 3)
+// ===============================
 
+app.MapHub<TmsHub>("/hubs/tms");
 
 // ===============================
 // Middleware Pipeline
 // ===============================
 
-
 app.UseMiddleware<RequestLoggingMiddleware>();
-
 
 app.UseExceptionHandler();
 
-
 app.UseMiddleware<V1DeprecationMiddleware>();
 
-
 app.UseRouting();
-
 
 // Rate limiter must be after routing
 app.UseRateLimiter();
 
-
 app.UseAuthentication();
 
 app.UseAuthorization();
-
-
 
 // ===============================
 // Development Tools
@@ -308,19 +287,14 @@ app.UseAuthorization();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-
     app.MapScalarApiReference();
 }
-
-
 
 // ===============================
 // Controllers
 // ===============================
 
 app.MapControllers();
-
-
 
 // ===============================
 // Error Test Route
@@ -332,8 +306,6 @@ app.MapGet("/api/error", () =>
         "Simulated database failure for ProblemDetails testing");
 });
 
-
-
 // ===============================
 // Database Seed
 // ===============================
@@ -341,26 +313,14 @@ app.MapGet("/api/error", () =>
 if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
-
-    var context =
-        scope.ServiceProvider.GetRequiredService<TmsDbContext>();
-
+    var context = scope.ServiceProvider.GetRequiredService<TmsDbContext>();
     await DataSeeder.SeedAsync(context);
 
-
-    var dbName =
-        context.Database.GetDbConnection().Database;
-
-
-    var courseCount =
-        await context.Courses.CountAsync();
-
+    var dbName = context.Database.GetDbConnection().Database;
+    var courseCount = await context.Courses.CountAsync();
 
     Console.WriteLine($"DATABASE: {dbName}");
-
     Console.WriteLine($"COURSES: {courseCount}");
 }
-
-
 
 app.Run();
