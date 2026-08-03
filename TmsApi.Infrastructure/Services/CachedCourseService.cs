@@ -54,9 +54,13 @@ public class CachedCourseService(
             tags: [CacheKeys.CoursesTag],
             cancellationToken: ct);
 
-
-        if (!dbHit)
+        if (dbHit)
         {
+            TmsMeters.CacheMisses.Add(1, new KeyValuePair<string, object?>("key.kind", "course"));
+        }
+        else
+        {
+            TmsMeters.CacheHits.Add(1, new KeyValuePair<string, object?>("key.kind", "course"));
             logger.LogInformation(
                 "Cache HIT for {Key}",
                 key);
@@ -65,13 +69,11 @@ public class CachedCourseService(
         return dto;
     }
 
-
-public async Task<List<CourseResponseDto>> GetAllCoursesAsync(
-    CancellationToken ct)
+    public async Task<List<CourseResponseDto>> GetAllCoursesAsync(
+        CancellationToken ct)
     {
         var key = CacheKeys.CoursesAll;
         var dbHit = false;
-
 
         var courses = await cache.GetOrCreateAsync(
             key,
@@ -84,34 +86,34 @@ public async Task<List<CourseResponseDto>> GetAllCoursesAsync(
                     "Cache MISS for {Key} - fetching from DB",
                     key);
 
-
                 var items = await state.GetAllCoursesAsync(token);
 
-return items.Select(c => new CourseResponseDto
-{
-    Id = c.Id,
-    Code = c.Code,
-    Title = c.Title,
-    MaxCapacity = c.MaxCapacity,
-    EnrollmentCount = c.Enrollments.Count
-}).ToList();
+                return items.Select(c => new CourseResponseDto
+                {
+                    Id = c.Id,
+                    Code = c.Code,
+                    Title = c.Title,
+                    MaxCapacity = c.MaxCapacity,
+                    EnrollmentCount = c.Enrollments.Count
+                }).ToList();
             },
             tags: [CacheKeys.CoursesTag],
             cancellationToken: ct);
 
-
-
-        if (!dbHit)
+        if (dbHit)
         {
+            TmsMeters.CacheMisses.Add(1, new KeyValuePair<string, object?>("key.kind", "course"));
+        }
+        else
+        {
+            TmsMeters.CacheHits.Add(1, new KeyValuePair<string, object?>("key.kind", "course"));
             logger.LogInformation(
                 "Cache HIT for {Key}",
                 key);
         }
 
-
         return courses;
     }
-
 
     public async Task InvalidateCourseCacheAsync(
         CancellationToken ct)
@@ -119,7 +121,6 @@ return items.Select(c => new CourseResponseDto
         logger.LogInformation(
             "Invalidating cache tag {Tag}",
             CacheKeys.CoursesTag);
-
 
         await cache.RemoveByTagAsync(
             CacheKeys.CoursesTag,

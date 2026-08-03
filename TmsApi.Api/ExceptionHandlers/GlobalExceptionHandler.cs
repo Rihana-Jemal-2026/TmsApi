@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using TmsApi.Application.Exceptions;
 
 namespace TmsApi.Api.ExceptionHandlers;
 
@@ -15,6 +16,12 @@ public class GlobalExceptionHandler(
     {
         var (status, title, detail, errors) = exception switch
         {
+            BadRequestException bre => (
+                StatusCodes.Status400BadRequest,
+                "Bad Request",
+                bre.Message,
+                null),
+
             ValidationException ve => (
                 StatusCodes.Status400BadRequest,
                 "Validation failed",
