@@ -17,6 +17,7 @@ using TmsApi.Application.Interfaces;
 using FluentValidation;
 using TmsApi.Application.Enrollments.Commands;
 using System.Threading.RateLimiting;
+using System.Threading.Channels;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -30,6 +31,10 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using TmsApi.Api.RateLimiting;
+using TmsApi.Application.Transcripts;
+using TmsApi.Infrastructure.Transcripts;
+using TmsApi.Api.Hubs;
+using TmsApi.Api.Workers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -137,6 +142,26 @@ builder.Services.AddHealthChecks()
         connectionString: builder.Configuration.GetConnectionString("TmsDatabase")!,
         name: "postgres",
         tags: ["ready"]);
+
+// ===============================
+// Transcripts & Background Workers (Session 3)
+// ===============================
+
+builder.Services.AddSingleton<ITranscriptStatusStore, InMemoryTranscriptStatusStore>();
+
+builder.Services.AddSingleton(Channel.CreateBounded<TranscriptRequest>(
+    new BoundedChannelOptions(100)
+    {
+        FullMode = BoundedChannelFullMode.Wait
+    }));
+
+builder.Services.AddHostedService<TranscriptWorker>();
+
+// ===============================
+// SignalR (Session 3)
+// ===============================
+
+builder.Services.AddSignalR();
 
 // ===============================
 // Rate Limiting
@@ -345,6 +370,12 @@ builder.Services.AddValidatorsFromAssembly(
     typeof(EnrollStudentValidator).Assembly);
 
 var app = builder.Build();
+
+// ===============================
+// SignalR Hub Endpoint (Session 3)
+// ===============================
+
+app.MapHub<TmsHub>("/hubs/tms");
 
 // ===============================
 // Health Check Endpoints
