@@ -17,10 +17,35 @@ using FluentValidation;
 using TmsApi.Application.Enrollments.Commands;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Mvc;
 using TmsApi.Api.RateLimiting;
+using TmsApi.Api.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+
+// ===============================
+// CORS Policy
+// ===============================
+
+var allowedOrigins = builder.Configuration
+    .GetSection("AllowedOrigins").Get<string[]>()
+    ?? ["http://localhost:4200"];
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("TmsClient", policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials()
+            .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
+    });
+});
+
 
 
 // ===============================
@@ -232,6 +257,19 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+// ===============================
+// Antiforgery (XSRF Protection)
+// ===============================
+
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-XSRF-TOKEN";
+});
+
+builder.Services.AddSignalR();
+
+
+
 
 
 // ===============================
@@ -284,11 +322,17 @@ app.UseMiddleware<RequestLoggingMiddleware>();
 
 app.UseExceptionHandler();
 
+app.UseStatusCodePages();
+
+
 
 app.UseMiddleware<V1DeprecationMiddleware>();
 
 
 app.UseRouting();
+
+app.UseCors("TmsClient");
+
 
 
 // Rate limiter must be after routing
@@ -298,6 +342,24 @@ app.UseRateLimiter();
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+// Issue readable XSRF-TOKEN cookie for authenticated/session users
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true || context.Request.Cookies.ContainsKey("tms_auth"))
+    {
+        var antiforgery = context.RequestServices.GetRequiredService<IAntiforgery>();
+        var tokens = antiforgery.GetAndStoreTokens(context);
+        context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!, new CookieOptions
+        {
+            HttpOnly = false, // MUST be false so Angular JavaScript can read it!
+            Secure = !app.Environment.IsDevelopment(),
+            SameSite = SameSiteMode.Strict
+        });
+    }
+    await next(context);
+});
+
 
 
 
@@ -319,6 +381,9 @@ if (app.Environment.IsDevelopment())
 // ===============================
 
 app.MapControllers();
+
+app.MapHub<TmsHub>("/hubs/tms").RequireCors("TmsClient");
+
 
 
 
