@@ -22,6 +22,9 @@ using Microsoft.AspNetCore.Mvc;
 using TmsApi.Api.RateLimiting;
 using Microsoft.AspNetCore.Identity;
 using TmsApi.Api.Hubs;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -216,6 +219,7 @@ builder.Services.AddOpenApi();
 // ===============================
 
 builder.Services.AddScoped<CryptoDemoService>();
+builder.Services.AddScoped<TokenService>();
 
 builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
 
@@ -270,11 +274,25 @@ builder.Services.AddIdentityCore<TmsUser>(options =>
 // Authentication
 // ===============================
 
-builder.Services
-    .AddAuthentication("TestScheme")
-    .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(
-        "TestScheme",
-        options => { });
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+    };
+});
 
 
 builder.Services.AddAuthorization();
