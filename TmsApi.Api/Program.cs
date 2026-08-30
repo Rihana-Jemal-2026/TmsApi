@@ -478,7 +478,7 @@ if (app.Environment.IsDevelopment())
 
 
     var dbName =
-        context.Database.GetDbConnection().Database;
+        context.Database.ProviderName != "Microsoft.EntityFrameworkCore.InMemory" && context.Database.IsRelational() ? context.Database.GetDbConnection().Database : "InMemory";
 
 
     var courseCount =
@@ -493,3 +493,5 @@ if (app.Environment.IsDevelopment())
 
 
 app.Run();
+
+public partial class Program { }
