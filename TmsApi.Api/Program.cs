@@ -25,6 +25,8 @@ using TmsApi.Api.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
+using TmsApi.Api.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -121,6 +123,13 @@ builder.Services.AddRateLimiter(options =>
         opt.QueueLimit = 20;
         opt.QueueProcessingOrder =
             QueueProcessingOrder.OldestFirst;
+    });
+
+    options.AddFixedWindowLimiter("AuthLimiter", opt =>
+    {
+        opt.PermitLimit = 5;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
     });
 
 
@@ -295,7 +304,11 @@ builder.Services.AddAuthentication(options =>
 });
 
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("CanEditCourse", policy =>
+        policy.Requirements.Add(new CourseInstructorRequirement()));
+
+builder.Services.AddSingleton<IAuthorizationHandler, CourseInstructorHandler>();
 
 // ===============================
 // Antiforgery (XSRF Protection)
@@ -355,6 +368,17 @@ var app = builder.Build();
 // ===============================
 // Middleware Pipeline
 // ===============================
+
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+    context.Response.Headers.Append(
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';");
+    await next();
+});
 
 
 app.UseMiddleware<RequestLoggingMiddleware>();

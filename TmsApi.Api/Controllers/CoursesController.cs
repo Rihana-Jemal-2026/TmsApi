@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TmsApi.Application.DTOs;
 using TmsApi.Application.Interfaces;
 using TmsApi.Domain.Entities;
 using Microsoft.AspNetCore.Routing;
+using TmsApi.Infrastructure.Persistence;
 
 namespace TmsApi.Controllers;
 
+[Authorize(Roles = "Instructor,Admin")]
 [ApiController]
 [Route("api/courses")]
 [Tags("Courses")]
@@ -14,16 +17,23 @@ namespace TmsApi.Controllers;
 public class CoursesController : ControllerBase
 {
     private readonly ICourseService _courseService;
-private readonly LinkGenerator _linkGenerator;
+    private readonly LinkGenerator _linkGenerator;
+    private readonly TmsDbContext _context;
+    private readonly IAuthorizationService _authorizationService;
 
-public CoursesController(
-    ICourseService courseService,
-    LinkGenerator linkGenerator)
-{
-    _courseService = courseService;
-    _linkGenerator = linkGenerator;
-}
+    public CoursesController(
+        ICourseService courseService,
+        LinkGenerator linkGenerator,
+        TmsDbContext context,
+        IAuthorizationService authorizationService)
+    {
+        _courseService = courseService;
+        _linkGenerator = linkGenerator;
+        _context = context;
+        _authorizationService = authorizationService;
+    }
 [HttpGet]
+[AllowAnonymous]
 [ProducesResponseType(typeof(PagedResponse<CourseResponseDto>), StatusCodes.Status200OK)]
 [EndpointSummary("List courses with pagination")]
 [EndpointDescription("Returns a paginated, optionally filtered list of TMS courses. PageSize is capped at 50.")]
@@ -36,6 +46,7 @@ public async Task<IActionResult> GetCourses(
     }
 
 [HttpGet("{id:int}", Name = nameof(GetById))]
+[AllowAnonymous]
 [ProducesResponseType(typeof(CourseDetailDto), StatusCodes.Status200OK)]
 [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
 [EndpointSummary("Get a course by ID")]
@@ -157,5 +168,24 @@ public async Task<ActionResult<CourseResponseDto>> Create(
             nameof(GetById),
             new { id = created.Id },
             response);
+    }
+
+    public record UpdateCourseDto(string Title);
+
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> UpdateCourse(int id, [FromBody] UpdateCourseDto dto)
+    {
+        var course = await _context.Courses.FindAsync(id);
+        if (course == null) return NotFound();
+
+        var authResult = await _authorizationService.AuthorizeAsync(User, course, "CanEditCourse");
+        if (!authResult.Succeeded)
+        {
+            return Forbid(); // 403 Forbidden when caller doesn't own the resource
+        }
+
+        course.Title = dto.Title;
+        await _context.SaveChangesAsync();
+        return NoContent();
     }
 }
