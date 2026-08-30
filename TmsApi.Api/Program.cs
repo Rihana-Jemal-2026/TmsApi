@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Mvc;
 using TmsApi.Api.RateLimiting;
+using Microsoft.AspNetCore.Identity;
 using TmsApi.Api.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -214,6 +215,8 @@ builder.Services.AddOpenApi();
 // Services
 // ===============================
 
+builder.Services.AddScoped<CryptoDemoService>();
+
 builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
 
 builder.Services.AddScoped<ICourseService, CourseService>();
@@ -241,6 +244,25 @@ builder.Services.AddDbContext<TmsDbContext>(options =>
         builder.Configuration.GetConnectionString("TmsDatabase"))
     .LogTo(Console.WriteLine, LogLevel.Information)
     .EnableSensitiveDataLogging());
+
+// ===============================
+// ASP.NET Core Identity
+// ===============================
+
+builder.Services.AddIdentityCore<TmsUser>(options =>
+{
+    // Enterprise Password Policy
+    options.Password.RequiredLength = 12;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireDigit = true;
+    options.Password.RequireNonAlphanumeric = true;
+    // Brute-Force Lockout Protection
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+    options.Lockout.AllowedForNewUsers = true;
+})
+.AddRoles<IdentityRole>()
+.AddEntityFrameworkStores<TmsDbContext>();
 
 
 

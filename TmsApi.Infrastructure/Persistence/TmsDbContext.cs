@@ -1,47 +1,29 @@
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using TmsApi.Domain.Entities;
 using System.Linq;
 
 using TmsApi.Infrastructure.Persistence.Configurations;
 
-public class TmsDbContext(DbContextOptions<TmsDbContext> options)
-    : DbContext(options)
+namespace TmsApi.Infrastructure.Persistence;
+
+public class TmsDbContext : IdentityDbContext<TmsUser>
 {
-    /*public override int SaveChanges()
+    public TmsDbContext(DbContextOptions<TmsDbContext> options) : base(options) { }
+
+    public override int SaveChanges()
     {
-        UpdateAudit();
         return base.SaveChanges();
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        UpdateAudit();
         return base.SaveChangesAsync(cancellationToken);
-    }*/
-
-    public override int SaveChanges()
-{
-    return base.SaveChanges();
-}
-
-public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-{
-    return base.SaveChangesAsync(cancellationToken);
-}
-
-   /* private void UpdateAudit()
-    {
-        var entries = ChangeTracker.Entries()
-            .Where(e => e.State == EntityState.Modified || e.State == EntityState.Added);
-
-        foreach (var entry in entries)
-        {
-            entry.Property("LastUpdated").CurrentValue = DateTime.UtcNow;
-        }
-    }*/
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(TmsDbContext).Assembly);
     }
 
