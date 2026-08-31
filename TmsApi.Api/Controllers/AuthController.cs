@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +12,10 @@ namespace TmsApi.Api.Controllers;
 
 [ApiController]
 [AllowAnonymous]
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/auth")]
+[Route("api/auth")]
+[ApiVersion("1.0")]
+[ApiVersion("2.0")]
 public class AuthController : ControllerBase
 {
     private readonly UserManager<TmsUser> _userManager;
@@ -41,6 +45,13 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
+        // Security Enforcement: Prevent public self-registration of Admin accounts
+        if (string.Equals(request.Role, "Admin", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(request.Role, "Administrator", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { errors = new[] { "Public registration of Administrator accounts is disabled for security reasons." } });
+        }
+
         var existingUser = await _userManager.FindByEmailAsync(request.Email);
         if (existingUser != null)
         {
@@ -70,6 +81,23 @@ public class AuthController : ControllerBase
         }
 
         await _userManager.AddToRoleAsync(user, request.Role);
+
+        if (request.Role.Equals("Student", StringComparison.OrdinalIgnoreCase))
+        {
+            var fullName = $"{request.FirstName} {request.LastName}".Trim();
+            var existingStudent = await _context.Students.FirstOrDefaultAsync(s => s.Name == fullName);
+            if (existingStudent == null)
+            {
+                _context.Students.Add(new Student
+                {
+                    RegistrationNumber = $"STU-{Random.Shared.Next(1000, 9999)}",
+                    Name = string.IsNullOrWhiteSpace(fullName) ? request.Email : fullName,
+                    GPA = 0.0m,
+                    IsActive = true
+                });
+                await _context.SaveChangesAsync();
+            }
+        }
 
         return Ok(new { message = "Registration successful." });
     }

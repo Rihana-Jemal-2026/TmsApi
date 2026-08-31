@@ -255,6 +255,7 @@ builder.Services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
 builder.Services.AddDbContext<TmsDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("TmsDatabase"))
+    .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
     .LogTo(Console.WriteLine, LogLevel.Information)
     .EnableSensitiveDataLogging());
 
