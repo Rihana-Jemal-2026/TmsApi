@@ -474,8 +474,12 @@ if (app.Environment.IsDevelopment())
 
     var context =
         scope.ServiceProvider.GetRequiredService<TmsDbContext>();
+    var userManager =
+        scope.ServiceProvider.GetRequiredService<UserManager<TmsUser>>();
+    var roleManager =
+        scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-    await DataSeeder.SeedAsync(context);
+    await DataSeeder.SeedAsync(context, userManager, roleManager);
 
 
     var dbName =

@@ -18,15 +18,16 @@ public class EnrollmentsController(IMediator mediator) : ControllerBase
     {
         var sampleEnrollments = new[]
         {
-            new { id = "ENR-101", studentId = 101, courseId = 302, studentName = "Dawit Abebe", courseName = "CS302 Web Architecture", status = "Pending", submittedAt = "2026-08-18T10:00:00Z" },
-            new { id = "ENR-102", studentId = 102, courseId = 302, studentName = "Liya Tadesse", courseName = "CS302 Web Architecture", status = "Approved", submittedAt = "2026-08-18T10:15:00Z" },
-            new { id = "ENR-103", studentId = 103, courseId = 401, studentName = "Abeba Kebede", courseName = "CS401 Database Internals", status = "Pending", submittedAt = "2026-08-18T11:00:00Z" }
+            new { id = "ENR-101", studentId = 101, courseId = 302, studentName = "Abebe Alemu", courseName = "CS302 Web Architecture", status = "Pending", submittedAt = "2026-08-18T10:00:00Z" },
+            new { id = "ENR-102", studentId = 102, courseId = 302, studentName = "Alemu Tadesse", courseName = "CS302 Web Architecture", status = "Approved", submittedAt = "2026-08-18T10:15:00Z" },
+            new { id = "ENR-103", studentId = 103, courseId = 401, studentName = "Rihana Mohammed", courseName = "CS401 Database Internals", status = "Pending", submittedAt = "2026-08-18T11:00:00Z" }
         };
 
         return Ok(sampleEnrollments);
     }
 
     [HttpPost("{id}/approve")]
+    [HttpPut("{id}/approve")]
     public IActionResult Approve(string id)
     {
         return NoContent();

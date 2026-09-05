@@ -18,16 +18,22 @@ public class TokenService
 
     public string GenerateJwt(TmsUser user, IList<string> roles)
     {
+        var fullName = $"{user.FirstName} {user.LastName}".Trim();
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id),
             new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
-            new Claim("FirstName", user.FirstName)
+            new Claim(ClaimTypes.Name, string.IsNullOrWhiteSpace(fullName) ? (user.Email ?? "User") : fullName),
+            new Claim("email", user.Email ?? string.Empty),
+            new Claim("name", string.IsNullOrWhiteSpace(fullName) ? (user.Email ?? "User") : fullName),
+            new Claim("FirstName", user.FirstName ?? string.Empty),
+            new Claim("LastName", user.LastName ?? string.Empty)
         };
 
         foreach (var role in roles)
         {
             claims.Add(new Claim(ClaimTypes.Role, role));
+            claims.Add(new Claim("role", role));
         }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));

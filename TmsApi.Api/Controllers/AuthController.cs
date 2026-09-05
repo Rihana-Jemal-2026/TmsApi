@@ -49,14 +49,13 @@ public class AuthController : ControllerBase
         if (string.Equals(request.Role, "Admin", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(request.Role, "Administrator", StringComparison.OrdinalIgnoreCase))
         {
-            return BadRequest(new { errors = new[] { "Public registration of Administrator accounts is disabled for security reasons." } });
+            return BadRequest(new { errors = new[] { "Public registration of Administrator accounts is disabled. Please register as a Student or Instructor." } });
         }
 
         var existingUser = await _userManager.FindByEmailAsync(request.Email);
         if (existingUser != null)
         {
-            // Prevent account enumeration by returning a generic response
-            return Ok(new { message = "Registration request received." });
+            return BadRequest(new { errors = new[] { $"An account with email '{request.Email}' is already registered. Please sign in instead." } });
         }
 
         var user = new TmsUser
@@ -75,14 +74,15 @@ public class AuthController : ControllerBase
         }
 
         // Ensure requested role exists
-        if (!await _roleManager.RoleExistsAsync(request.Role))
+        var targetRole = string.Equals(request.Role, "Instructor", StringComparison.OrdinalIgnoreCase) ? "Instructor" : "Student";
+        if (!await _roleManager.RoleExistsAsync(targetRole))
         {
-            await _roleManager.CreateAsync(new IdentityRole(request.Role));
+            await _roleManager.CreateAsync(new IdentityRole(targetRole));
         }
 
-        await _userManager.AddToRoleAsync(user, request.Role);
+        await _userManager.AddToRoleAsync(user, targetRole);
 
-        if (request.Role.Equals("Student", StringComparison.OrdinalIgnoreCase))
+        if (targetRole.Equals("Student", StringComparison.OrdinalIgnoreCase))
         {
             var fullName = $"{request.FirstName} {request.LastName}".Trim();
             var existingStudent = await _context.Students.FirstOrDefaultAsync(s => s.Name == fullName);
@@ -99,7 +99,7 @@ public class AuthController : ControllerBase
             }
         }
 
-        return Ok(new { message = "Registration successful." });
+        return Ok(new { message = "Registration successful.", role = targetRole });
     }
 
     public record LoginRequest(string Email, string Password);
@@ -109,7 +109,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var user = await _userManager.FindByEmailAsync(request.Email);
-        if (user == null) return Unauthorized(new { detail = "Invalid credentials." });
+        if (user == null) return Unauthorized(new { detail = "Invalid credentials. Account not found." });
 
         if (await _userManager.IsLockedOutAsync(user))
         {
@@ -120,7 +120,7 @@ public class AuthController : ControllerBase
         if (!validPassword)
         {
             await _userManager.AccessFailedAsync(user);
-            return Unauthorized(new { detail = "Invalid credentials." });
+            return Unauthorized(new { detail = "Invalid email or password." });
         }
 
         await _userManager.ResetAccessFailedCountAsync(user);
